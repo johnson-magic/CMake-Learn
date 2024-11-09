@@ -1,0 +1,4 @@
+/home/ecs-user/code/CMake-Learn/code/build/_CPack_Packages/Linux/TZ/Tutorial-1.0-Linux/bin/Tutorial
+/home/ecs-user/code/CMake-Learn/code/build/_CPack_Packages/Linux/TZ/Tutorial-1.0-Linux/include/TutorialConfig.h
+/home/ecs-user/code/CMake-Learn/code/build/_CPack_Packages/Linux/TZ/Tutorial-1.0-Linux/lib/libMathFunctions.a
+/home/ecs-user/code/CMake-Learn/code/build/_CPack_Packages/Linux/TZ/Tutorial-1.0-Linux/include/mysqrt.h

@@ -1,0 +1,22 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/ecs-user/code/CMake-Learn/code/MathFunctions/mysqrt.cxx
+mysqrt.h
+/home/ecs-user/code/CMake-Learn/code/MathFunctions/mysqrt.h
+Table.h
+/home/ecs-user/code/CMake-Learn/code/MathFunctions/Table.h
+iostream
+-
+cmath
+-
+
+/home/ecs-user/code/CMake-Learn/code/MathFunctions/mysqrt.h
+
+MathFunctions/Table.h
+
