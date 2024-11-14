@@ -1,5 +1,8 @@
-- [1. cmake learn](#1-cmake-learn)
-  - [1.1 CMakeLists.txt的最小单元（以及cmake对工程的版本号处理）](#11-cmakeliststxt的最小单元以及cmake对工程的版本号处理)
+- [1. why cmake](#1-why-cmake)
+- [2. how cmake](#2-how-cmake)
+  - [2.1 CMakeLists.txt的最小单元](#21-cmakeliststxt的最小单元)
+    - [建议1：将project的版本号写在CMakeLists.txt中而不是在head文件中](#建议1将project的版本号写在cmakeliststxt中而不是在head文件中)
+    - [建议2：将尽可能准确的描述写在CMakeLists.txt中](#建议2将尽可能准确的描述写在cmakeliststxt中)
   - [1.2 CMake调用依赖库](#12-cmake调用依赖库)
   - [1.3 通过外部开关激活库中的不同代码组件(编译)](#13-通过外部开关激活库中的不同代码组件编译)
   - [1.4 通过系统内省（system introspection）(更加智能的)激活库中的不同代码组件(编译)](#14-通过系统内省system-introspection更加智能的激活库中的不同代码组件编译)
@@ -13,63 +16,63 @@
 - [3. 一些不成熟的想法](#3-一些不成熟的想法)
 - [4. 做中想](#4-做中想)
 
+# 1. why cmake
+&emsp;&emsp;从cmake、make到gcc(g++)的渊源讲起，在stack_overflow上有人提出了类似的一个问题：[understanding-roles-of-cmake-make-and-gcc](https://stackoverflow.com/questions/39761924/understanding-roles-of-cmake-make-and-gcc)。
 
+>It is easier to understand when you have the history. People used their compiler. Over time they added so many flags, that it was cumbersome to type them every time. So they put the calls in a script. From that the build systems (Make, Ninja) evolved.
+The people wanted to support multiple platforms, compilers, scenarios and so on and the build system files became hard to maintain and their use was error-prone. That's the reason people invented meta build system that creates the files for the actual build system. Examples are Autotools or CMake.
 
-# 1. cmake learn
-该文档是对cmake学习过程的总结，涉及到以下特性：
+&emsp;&emsp;也就是说，gcc是complier，其本身已经能够完成从c代码到库和可执行文件的生成，make和cmake是类似于一种“脚手架”的工具。Makefile文件是call gcc complier的脚本（在脚本文件中，可以增加多种多样的flags），make工具用于运行Makefile文件（可能类似于python与.py文件之间的关系）。cmake是更高一个维度的工具，它的脚本文件是MakeLists.txt，在脚本文件中，可以处理多平台问题等。
 
-* cmake的最小工作单元
-* cmake对工程的版本号处理
+&emsp;&emsp;另外一个维度，要把CMakeLists.txt理解为一个project的蓝图，用户需要了解的所有信息都应汇聚在这里（强调"全"和"集中"，这是每一份说明书应该遵循的）。
 
+# 2. how cmake
+## 2.1 CMakeLists.txt的最小单元
+&emsp;&emsp;一个CMakeLists.txt的基本内容如下：
+```
+cmake_minimum_required(VERSION 3.10)
+project(Tutorial)
+add_executable(Tutorial tutorial.cxx)
+```
 
-## 1.1 CMakeLists.txt的最小单元（以及cmake对工程的版本号处理）
-&emsp;&emsp;本小节中涉及CMake的如下两个特性
-* cmake的最小工作单元
-* cmake对工程的版本号处理
+### 建议1：将project的版本号写在CMakeLists.txt中而不是在head文件中
 
-&emsp;&emsp;初衷: 虽然可以将project的版本号显示的写在代码内部，但将其通过CMakeLists.txt进行管理会更加灵活。（思考：这里的灵活体现在哪里？）
-&emsp;&emsp;如何做：
-
-将版本信息通过project指令显式的写入CMakeLists.txt中（隐含的思想：关于project的信息集中存放）
-
+&emsp;&emsp;虽然可以将project的版本号显示的写在代码内部（例如一个头文件中，之前在hk就是这么做的），但将其通过CMakeLists.txt进行说明和管理更加优雅，因为这符合信息集中管理的思想。给到用户看到的是
 ```
 project(Tutorial VERSION 1.0)
-```
-该指令的隐含操作，会（自动）设置VERSION相关的变量：<PROJECT-NAME>_VERSION_MAJOR、<PROJECT-NAME>_VERSION_MINOR、<PROJECT-NAME>_VERSION_PATCH、<PROJECT-NAME>_VERSION_TWEAK，对应到这里就是Tutorial_VERSION_MAJOR和Tutorial_VERSION_MINOR分别为1和0。 
-
-```
 configure_file(TutorialConfig.h.in TutorialConfig.h)
-```
-该指令会起两个作用：文件的搬运和文件内相关变量的替换。具体到本工程：TutorialConfig.h.in的内容为：
-```
-#define Tutorial_VERSION_MAJOR @Tutorial_VERSION_MAJOR@
-#define Tutorial_VERSION_MINOR @Tutorial_VERSION_MINOR@
-```
-该文件首先会被搬运至build文件夹，文件中的内容@VAR@会被替换为VAR的内容。此时就会有一个含有显式版本信息的头文件，只不过要注意的是该头文件是在编译的过程中自动生成的，且存放的位置为build文件。本质上还是将版本号写在了源代码里面，但源代码是自动生成的，且位于build目录，多此一举的目的就是将信息集中管控、集中修改。
-有了含有版本号的头文件，源代码中就可以像普通头文件一样使用：在哪里？拿过来？使用。
-在哪里(CMakeLists.txt)：
-```
 target_include_directories(Tutorial PUBLIC
                            "${PROJECT_BINARY_DIR}"
                            )
 ```
-拿过来(tutorial.cxx)：
+cmake内部会隐含的生成TutorialConfig.h。
+
+&emsp;&emsp;具体的原理为：
+<details>
+&emsp;&emsp;project(Tutorial VERSION 1.0)会（自动）设置VERSION相关的变量：PROJECT-NAME_VERSION_MAJOR、PROJECT-NAME_VERSION_MINOR、PROJECT-NAME_VERSION_PATCH、PROJECT-NAME_VERSION_TWEAK，对应到这里就是Tutorial_VERSION_MAJOR和Tutorial_VERSION_MINOR分别为1和0。 configure_file(TutorialConfig.h.in TutorialConfig.h)该指令会起两个作用：文件的搬运和文件内相关变量的替换。具体到本工程：TutorialConfig.h.in的内容为：
+
 ```
-#include "TutorialConfig.h"
+#define Tutorial_VERSION_MAJOR @Tutorial_VERSION_MAJOR@
+#define Tutorial_VERSION_MINOR @Tutorial_VERSION_MINOR@
 ```
-使用(tutorial.cxx)：
-```
- std::cout << argv[0] << " Version " << Tutorial_VERSION_MAJOR << "."
-              << Tutorial_VERSION_MINOR << std::endl;
-```
-杂：c++编译器编译器可能同时支持不同的C++标准，可以通过以下配置，为编译器进一步明确它该使用的版本，因为有可能project的代码中使用到了11中才有的高级特性。
+&emsp;&emsp;该文件首先会被搬运至build文件夹，文件中的内容@VAR@会被替换为VAR的内容。此时就会有一个含有显式版本信息的头文件，只不过要注意的是该头文件是在编译的过程中自动生成的，且存放的位置为build文件。本质上还是将版本号写在了源代码里面，但源代码是自动生成的，且位于build目录，多此一举的目的就是将信息集中管控、集中修改。
+</details>
+
+### 建议2：将尽可能准确的描述写在CMakeLists.txt中
+&emsp;&emsp;c++编译器编译器可能同时支持不同的C++标准，可以通过以下配置，为编译器进一步明确它该使用的版本，因为有可能project的代码中使用到了11中才有的高级特性。
 ```
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 ```
 
 ## 1.2 CMake调用依赖库
-略
+![drawio](./images/test.drawio.png)
+
+```sequence
+Alice->Bob: Hello Bob, how are you?
+Note right of Bob: Bob thinks
+Bob-->Alice: I am good thanks!
+```
 
 ## 1.3 通过外部开关激活库中的不同代码组件(编译)
 
